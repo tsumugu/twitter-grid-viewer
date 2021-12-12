@@ -1,18 +1,27 @@
 <template>
   <div class="home">
+    <vue-gallery-slideshow :images="modalImageList" :index="modalImageIndex" @close="modalImageIndex = null"></vue-gallery-slideshow>
     <div id="notlogined" v-if="this.credential==null">
       <button v-on:click="signin">Sign in with Twitter</button>
     </div>
     <div v-else>
-      <!--<div class="button-wrapper"><button v-on:click="searchTweets">search</button></div>-->
       <div class="row">
-        <!--
-        <a v-for="t in imageList" :key="t.imgUrl" :href="t.tweetUrl"><img :src="t.imgUrl" style="width:100%"></a>
-        -->
         <div v-for="(c, cindex) in columnList" :key="cindex" class="column">
-          <div v-for="(t, rindex) in c" :key="rindex" class="item"><a :href="t.tweetUrl" target="_blank"><img :src="t.imgUrl" style="width:100%"></a><div class="item__multi-icon"><span class="material-icons">layers</span><p>4</p></div><button class="item__fav-button" v-bind:class="{favorited: t.favorited}" v-on:click="createFav(cindex, rindex, t.id)">♡</button></div>
-        </div>
-      </div>
+          <div v-for="(t, rindex) in c" :key="rindex" class="item">
+            <img v-lazy="t.imgUrl" style="width:100%" v-on:click="openModal(t.imgUrlList)">
+            <div class="item__author-info" v-show="t.isShowAuthorInfoFadein||t.isShowAuthorInfoFadeout" v-bind:class="{fadein: t.isShowAuthorInfoFadein, fadeout: t.isShowAuthorInfoFadeout}">
+              <div class="item__author-info__top-wrap">
+                <img class="item__author-info__top-wrap__icon" v-lazy="t.user.profileImgUrl">
+                <div class="item__author-info__top-wrap__names">
+                  <p class="item__author-info__top-wrap__names__name">{{t.user.name}}</p>
+                  <p class="item__author-info__top-wrap__names__screen-name">@{{t.user.screen_name}}</p>
+                </div>
+              </div>
+              <p class="item__author-info__text"><a :href="t.tweetUrl" target="_blank">{{t.text}}</a></p>
+            </div>
+            <div class="item__multi-icon" v-show="t.imgNum>1"><span class="material-icons">layers</span><p>{{t.imgNum}}</p></div>
+            <button class="item__fav-button" v-bind:class="{favorited: t.favorited}" v-on:click="createFav(cindex, rindex, t.id)"><span class="material-icons-outlined"><span class="material-icons-outlined">favorite_border</span></span></button>
+            <button class="item__show-author-info-button" v-on:click="showAuthorInfo(cindex, rindex)"><span class="material-icons-outlined">info</span></button></div></div></div>
       <div class="button-wrapper"><button v-on:click="loadmoreTweets">さらに読み込む</button></div>
     </div>
   </div>
@@ -21,8 +30,13 @@
 <script>
 import axios from "axios"
 import { getAuth, signInWithRedirect, getRedirectResult, onAuthStateChanged, TwitterAuthProvider } from "firebase/auth"
+import VueGallerySlideshow from 'vue-gallery-slideshow';
+
 export default {
   name: 'Home',
+  components: {
+    VueGallerySlideshow
+  },
   data () {
     return {
       auth: null,
@@ -30,7 +44,9 @@ export default {
       credential: null,
       imageList: [],
       columnList: [],
-      maxId: null
+      maxId: null,
+      modalImageList: [],
+      modalImageIndex: null
     }
   },
   watch: {
@@ -85,21 +101,32 @@ export default {
         this.imageList = []
       //}
       res.data.tweets.forEach(t=>{
-        const media = t.entities.media
+        const media = t.extended_entities.media
         if (media != undefined) {
           const tweet_id = t.id_str
+          const text = t.text;
           const imgNum = media.length
           const tweetUrl = "https://"+media[0].display_url
           const imgUrl = media[0].media_url_https
           const size = media[0].sizes.large
           const favorited = t.favorited
+          const imgUrlList = media.map(e=>e.media_url_https);
           this.imageList.push({
             "id": tweet_id,
+            "text": text,
             "imgNum": imgNum,
             "tweetUrl": tweetUrl,
             "imgUrl": imgUrl,
             "size": size,
-            "favorited": favorited
+            "favorited": favorited,
+            "imgUrlList": imgUrlList,
+            "user": {
+              "name": t.user.name,
+              "screen_name": t.user.screen_name,
+              "profileImgUrl": t.user.profile_image_url_https.replace("_normal", "")
+            },
+            "isShowAuthorInfoFadein": false,
+            "isShowAuthorInfoFadeout": false
           })
         }
       })
@@ -109,6 +136,23 @@ export default {
       // 参考 https://teratail.com/questions/230247
       const size = Math.ceil(arr.length / len);
       return [...new Array(size)].map((_, i) => arr.slice(i * len, (i + 1) * len));
+    },
+    openModal(imgUrlList) {
+      this.modalImageList = imgUrlList;
+      this.modalImageIndex = 0;
+    },
+    showAuthorInfo(column_index, row_index) {
+      if (!this.columnList[column_index][row_index].isShowAuthorInfoFadein && !this.columnList[column_index][row_index].isShowAuthorInfoFadeout) {
+        // 両方falseは初回
+        this.columnList[column_index][row_index].isShowAuthorInfoFadein = true;
+        this.columnList[column_index][row_index].isShowAuthorInfoFadeout = false;
+      } else if (this.columnList[column_index][row_index].isShowAuthorInfoFadein && !this.columnList[column_index][row_index].isShowAuthorInfoFadeout) {
+        this.columnList[column_index][row_index].isShowAuthorInfoFadein = false;
+        this.columnList[column_index][row_index].isShowAuthorInfoFadeout = true;
+      } else if (!this.columnList[column_index][row_index].isShowAuthorInfoFadein && this.columnList[column_index][row_index].isShowAuthorInfoFadeout) {
+        this.columnList[column_index][row_index].isShowAuthorInfoFadein = true;
+        this.columnList[column_index][row_index].isShowAuthorInfoFadeout = false;
+      }
     }
   },
   mounted() {
@@ -171,6 +215,55 @@ export default {
 .item {
   position: relative;
   padding-bottom: 48px;
+  &__author-info {
+    padding: 16px;
+    position: absolute;
+    bottom: 68px;
+    left: 8px;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    width: 90%;
+    opacity: 0.9;
+    background-color: #fefefe;
+    border-radius: 15px;
+    &__top-wrap {
+      display: flex;
+      justify-content: left;
+      align-items: center;
+      &__icon {
+        margin: 0 !important;
+        padding: 0;
+        width: 64px !important;
+        height: 64px;
+        border-radius: 50px;
+      }
+      &__names {
+        margin-left: 5px;
+        display: inline;
+        &__name {
+          margin: 0;
+          padding: 0;
+          font-weight: bold;
+          font-size: 18px;
+          word-break: break-all;
+        }
+        &__screen-name {
+          margin: 0;
+          padding: 0;
+          color: gray;
+          font-size: 14px;
+          word-break: break-all;
+        }
+      }
+    }
+    &__text {
+      margin: 0;
+      padding: 0;
+      > a {
+        color: #2c3e50;
+      }
+    }
+  }
   &__multi-icon {
     position: absolute;
     /*top: 16px;*/
@@ -210,18 +303,45 @@ export default {
     /* 48pxのとき */
     bottom: 32px;
     left: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     width: 32px;
     height: 32px;
     border-radius: 50px;
     border: none;
     background-color: #fefefe;
+    color: #a19d9d;
     opacity: 0.8;
     text-align: center;
     vertical-align: middle;
+    > .material-icons-outlined {
+      font-size: 18px !important;
+    }
   }
   > .favorited, &__fav-button:hover {
     color: #fefefe;
     background-color: #d90000;
+  }
+  &__show-author-info-button {
+    position: absolute;
+    bottom: 32px;
+    left: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50px;
+    border: none;
+    background-color: #fefefe; 
+    color: #a19d9d;
+    opacity: 0.8;
+    text-align: center;
+    vertical-align: middle;
+    > .material-icons-outlined {
+      font-size: 22px !important;
+    }
   }
 }
 
@@ -263,6 +383,29 @@ export default {
     -ms-flex: 100%;
     flex: 100%;
     max-width: 100%;
+  }
+}
+
+.fadein {
+  animation: fadein 1000ms ease 0s 1 forwards;
+}
+
+.fadeout {
+  animation: fadeout 1000ms ease 0s 1 forwards;
+}
+
+@keyframes fadein {
+  100% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes fadeout {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
   }
 }
 </style>
