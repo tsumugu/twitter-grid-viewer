@@ -5,6 +5,16 @@
       <button v-on:click="signin">Sign in with Twitter</button>
     </div>
     <div v-else>
+      <div class="menubar">
+        <button class="menubar__open-button" v-bind:class="{expand_radius: isExp, antonym_radius: isAnt}" v-on:click="expSearch"><span class="material-icons-outlined">search</span></button>
+        <div class="menubar__band" v-bind:class="{expand: isExp, antonym: isAnt}">
+          <div class="menubar__band__contents" v-bind:class="{expand_form: isExp, antonym_form: isAnt}">
+            <input type="text" v-model="q">
+            <button v-on:click="searchTweets">検索</button>
+            <div><label for="checkbox"><input type="checkbox" id="checkbox" v-model="isFavoritedOnly">未いいねのみ表示</label></div>
+          </div>
+        </div>
+      </div>
       <div class="row">
         <div v-for="(c, cindex) in columnList" :key="cindex" class="column">
           <div v-for="(t, rindex) in c" :key="rindex" class="item">
@@ -46,19 +56,49 @@ export default {
       columnList: [],
       maxId: null,
       modalImageList: [],
-      modalImageIndex: null
+      modalImageIndex: null,
+      isExp: false,
+      isAnt: false,
+      q: "list:1439526586533900296 min_faves:1000",
+      isFavoritedOnly: false
     }
   },
   watch: {
     imageList: function() {
-      // v-forでの表示のために7個ごとに区切った配列を整形する
-      this.columnList = this.splitArray(this.imageList, this.imageList.length/4)
-      this.columnList.splice()
+      this.makeDisplayList();
+    },
+    isFavoritedOnly: function() {
+      this.makeDisplayList();
+    },
+    q: function() {
+      // 保存しておく
+      localStorage.setItem('q', this.q)
     }
   },
   methods: {
     signin() {
       signInWithRedirect(this.auth, this.provider)
+    },
+    makeDisplayList() {
+      // v-forでの表示のために7個ごとに区切った配列を整形する
+      let list = this.imageList
+      if (this.isFavoritedOnly) {
+        list = this.imageList.filter(e=>!e.favorited)
+      }
+      this.columnList = this.splitArray(list, list.length/4)
+      this.columnList.splice()
+    },
+    expSearch() {
+      if (!this.isExp && !this.isAnt) {
+        this.isExp = true;
+        this.isAnt = false;
+      } else if (this.isExp && !this.isAnt) {
+        this.isExp = false;
+        this.isAnt = true;
+      } else if (!this.isExp && this.isAnt) {
+        this.isExp = true;
+        this.isAnt = false;
+      }
     },
     createFav(column_index, row_index, tweetid) {
       axios.get('https://tsumugu2626.xyz/twittergridviewer/createfav.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&tweetid='+tweetid)
@@ -73,7 +113,7 @@ export default {
       });
     },
     searchTweets() {
-      axios.get('https://tsumugu2626.xyz/twittergridviewer/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI('list:1439526586533900296 min_faves:1000'))
+      axios.get('https://tsumugu2626.xyz/twittergridviewer/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI(this.q))
       .then(res => {
         this.processRes(res, true)
       })
@@ -82,7 +122,7 @@ export default {
       });
     },
     loadmoreTweets() {
-      axios.get('https://tsumugu2626.xyz/twittergridviewer/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI('list:1439526586533900296 min_faves:1000')+'&max_id='+this.maxId)
+      axios.get('https://tsumugu2626.xyz/twittergridviewer/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI(this.q)+'&max_id='+this.maxId)
       .then(res => {
         this.processRes(res, false)
       })
@@ -158,6 +198,7 @@ export default {
   mounted() {
     this.auth = getAuth()
     this.provider = new TwitterAuthProvider()
+    this.q = localStorage.getItem('q')
     onAuthStateChanged(this.auth, (user) => {
       if (user) {
         this.credential = JSON.parse(localStorage.getItem('credential'))
@@ -182,6 +223,67 @@ export default {
 <style lang="scss" scoped>
 .home {
   margin: 0;
+}
+
+.menubar {
+  &__open-button {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50px;
+    height: 50px;
+    color: #fefefe;
+    background-color: #0096d9;
+    z-index: 1;
+    border-radius: 0 50px 50px 0;
+    border: none;
+    > .material-icons-outlined {
+      font-size: 28px !important;
+    }
+  }
+  &__band {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 50px;
+    background-color: #0096d9;
+    &__contents {
+      position: absolute;
+      top: 10px;
+      left: 45px;
+      z-index: 2;
+      opacity: 0;
+      > input {
+        border:0;
+        border:solid 1px #ccc;
+        width: 300px;
+        height: 28px;
+      }
+      > button {
+        position: absolute;
+        top: 0;
+        left: 305px;
+        width: 50px;
+        height: 28px;
+        background-color: #fefefe;
+        border:solid 1px #ccc;
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+      }
+      > div {
+        position: absolute;
+        top: 2px;
+        left: 367px;
+        width: 150px;
+        > label {
+          user-select: none;
+          color: #fefefe;
+        }
+      }
+    }
+  }
 }
 
 .button-wrapper {
@@ -406,6 +508,81 @@ export default {
   }
   100% {
     opacity: 0;
+  }
+}
+
+.expand {
+  animation: expand 1000ms ease 0s 1 forwards;
+}
+
+.antonym {
+  animation: antonym 1000ms ease 0s 1 forwards;
+}
+
+@keyframes expand {
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes antonym {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+.expand_form {
+  animation: expand-form 1000ms ease 0s 1 forwards;
+}
+
+.antonym_form {
+  animation: antonym-form 1000ms ease 0s 1 forwards;
+}
+
+@keyframes expand-form {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes antonym-form {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.expand_radius {
+  animation: expand-radius 4200ms ease 0s 1 forwards;
+}
+
+.antonym_radius {
+  animation: antonym-radius 4200ms ease 0s 1 forwards;
+}
+
+@keyframes expand-radius {
+  0% {
+    border-radius: 0 50px 50px 0;
+  }
+  100% {
+    border-radius: 0;
+  }
+}
+
+@keyframes antonym-radius {
+  0% {
+    border-radius: 0;
+  }
+  100% {
+    border-radius: 0 50px 50px 0;
   }
 }
 </style>
