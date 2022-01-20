@@ -1,7 +1,20 @@
 <template>
   <div class="home">
-    <vue-gallery-slideshow :images="modalImageList" :index="modalImageIndex" @close="modalImageIndex = null"></vue-gallery-slideshow>
-    <div id="notlogined" v-if="this.credential==null">
+    <div class="slideshow" v-if="this.isOpeningModal">
+      <button class="slideshow__button slideshow__close-button" v-on:click="()=>{this.modalImageList=[]; this.modalImageIndex=null;}">x</button>
+      <button class="slideshow__button slideshow__minus-button" v-on:click="()=>{
+        if (this.modalImageIndex > 0) {
+          this.modalImageIndex--;
+        }
+      }" v-show="this.modalImageIndex>0">&lt;</button>
+      <img class="slideshow__image" v-lazy="this.modalImageList[this.modalImageIndex]">
+      <button class="slideshow__button slideshow__plus-button" v-on:click="()=>{
+        if (this.modalImageList.length-1 > this.modalImageIndex) {
+          this.modalImageIndex++;
+        }
+      }" v-show="this.modalImageList.length-1>this.modalImageIndex">&gt;</button>
+    </div>
+    <div class="notlogined" v-if="this.credential==null">
       <button v-on:click="signin">Sign in with Twitter</button>
     </div>
     <div v-else>
@@ -40,13 +53,9 @@
 <script>
 import axios from "axios"
 import { getAuth, signInWithRedirect, getRedirectResult, onAuthStateChanged, TwitterAuthProvider } from "firebase/auth"
-import VueGallerySlideshow from 'vue-gallery-slideshow';
 
 export default {
   name: 'Home',
-  components: {
-    VueGallerySlideshow
-  },
   data () {
     return {
       auth: null,
@@ -56,11 +65,12 @@ export default {
       columnList: [],
       maxId: null,
       modalImageList: [],
-      modalImageIndex: null,
+      modalImageIndex: 0,
       isExp: false,
       isAnt: false,
       q: "list:1439526586533900296 min_faves:1000",
-      isFavoritedOnly: false
+      isFavoritedOnly: false,
+      isOpeningModal: false
     }
   },
   watch: {
@@ -73,6 +83,14 @@ export default {
     q: function() {
       // 保存しておく
       localStorage.setItem('q', this.q)
+    },
+    modalImageList: function() {
+      if (this.modalImageList.length>0 && this.modalImageIndex != null) {
+        this.isOpeningModal = true;
+      } else {
+        this.isOpeningModal = false;
+      }
+      this.togglePreventScroll();
     }
   },
   methods: {
@@ -101,7 +119,7 @@ export default {
       }
     },
     createFav(column_index, row_index, tweetid) {
-      axios.get('https://tsumugu2626.xyz/twittergridviewer/createfav.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&tweetid='+tweetid)
+      axios.get('https://twigrid.tsumugu2626.xyz/createfav.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&tweetid='+tweetid)
       .then(res => {
         // ふぁぼれてたらclassを付与する
         if (res.data.res.favorited) {
@@ -113,7 +131,7 @@ export default {
       });
     },
     searchTweets() {
-      axios.get('https://tsumugu2626.xyz/twittergridviewer/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI(this.q))
+      axios.get('https://twigrid.tsumugu2626.xyz/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI(this.q))
       .then(res => {
         this.processRes(res, true)
       })
@@ -122,7 +140,7 @@ export default {
       });
     },
     loadmoreTweets() {
-      axios.get('https://tsumugu2626.xyz/twittergridviewer/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI(this.q)+'&max_id='+this.maxId)
+      axios.get('https://twigrid.tsumugu2626.xyz/searchtweets.php?access_token='+this.credential.accessToken+'&access_token_secret='+this.credential.secret+'&q='+encodeURI(this.q)+'&max_id='+this.maxId)
       .then(res => {
         this.processRes(res, false)
       })
@@ -181,6 +199,20 @@ export default {
       this.modalImageList = imgUrlList;
       this.modalImageIndex = 0;
     },
+    preventDefaultEvent(event) {
+      event.preventDefault();
+    },
+    togglePreventScroll() {
+      if (this.isOpeningModal) {
+        // モーダル背面のスクロールを抑制
+        document.addEventListener('touchmove', this.preventDefaultEvent, { passive: false });
+        document.addEventListener('mousewheel', this.preventDefaultEvent, { passive: false });
+      } else {
+        // モーダル背面のスクロールを抑制
+        document.removeEventListener('touchmove', this.preventDefaultEvent, { passive: false });
+        document.removeEventListener('mousewheel', this.preventDefaultEvent, { passive: false });
+      }
+    },
     showAuthorInfo(column_index, row_index) {
       if (!this.columnList[column_index][row_index].isShowAuthorInfoFadein && !this.columnList[column_index][row_index].isShowAuthorInfoFadeout) {
         // 両方falseは初回
@@ -223,6 +255,44 @@ export default {
 <style lang="scss" scoped>
 .home {
   margin: 0;
+}
+
+.slideshow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #4a4a4a;
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  &__button {
+    font-size: 1.8rem;
+    border: none;
+    background: transparent;
+    color: #fefefe;
+  }
+  &__close-button {
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+  &__minus-button {
+    position: fixed;
+    top: 50%;
+    left: 0;
+  }
+  &__image {
+    height: 100%;
+  }
+  &__plus-button {
+    position: fixed;
+    top: 50%;
+    right: 0;
+  }
 }
 
 .menubar {
@@ -298,7 +368,7 @@ export default {
   padding: 6px 20px;
   display: inline-block;
   position: relative;
-  width: 20%;
+  width: 30%;
   min-width: 80px;
   text-align: center;
   cursor: pointer;
@@ -485,6 +555,9 @@ export default {
     -ms-flex: 100%;
     flex: 100%;
     max-width: 100%;
+  }
+  .button-wrapper > button {
+    width: calc( 100% - 96px );
   }
 }
 
