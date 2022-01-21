@@ -255,10 +255,14 @@ export default {
 <style lang="scss" scoped>
 .home {
   margin: 0;
+  width: 100vw;
+  height: 100vh;
+  position:relative;
+  overflow: scroll;
 }
 
 .slideshow {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100vw;
@@ -276,13 +280,13 @@ export default {
     color: #fefefe;
   }
   &__close-button {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
   }
   &__minus-button {
-    position: fixed;
-    top: 50%;
+    position: absolute;
+    top: 50vh;
     left: 0;
   }
   &__image {
@@ -291,8 +295,8 @@ export default {
     object-fit: scale-down;
   }
   &__plus-button {
-    position: fixed;
-    top: 50%;
+    position: absolute;
+    top: 50vh;
     right: 0;
   }
 }
