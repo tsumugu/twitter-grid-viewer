@@ -255,14 +255,14 @@ export default {
 <style lang="scss" scoped>
 .home {
   margin: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   position:relative;
   overflow: scroll;
 }
 
 .slideshow {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   width: 100vw;
