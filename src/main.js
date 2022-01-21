@@ -3,7 +3,7 @@ import App from './App.vue'
 import './registerServiceWorker'
 import router from './router'
 import VueLazyload from 'vue-lazyload'
-
+import Vue2TouchEvents from 'vue2-touch-events'
 
 Vue.config.productionTip = false
 
@@ -21,6 +21,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 getAnalytics(app);
 
+Vue.use(Vue2TouchEvents)
 Vue.use(VueLazyload)
 /*
 Vue.use(VueLazyload, {

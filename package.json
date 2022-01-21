@@ -15,7 +15,8 @@
     "vue-gallery-slideshow": "^1.5.2",
     "vue-js-modal": "^2.0.1",
     "vue-lazyload": "^1.3.3",
-    "vue-router": "^3.2.0"
+    "vue-router": "^3.2.0",
+    "vue2-touch-events": "^3.2.2"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",

@@ -1,18 +1,10 @@
 <template>
-  <div class="home">
-    <div class="slideshow" v-if="this.isOpeningModal">
-      <button class="slideshow__button slideshow__close-button" v-on:click="()=>{this.modalImageList=[]; this.modalImageIndex=null;}"><span class="material-icons-outlined">close</span></button>
-      <button class="slideshow__button slideshow__minus-button" v-on:click="()=>{
-        if (this.modalImageIndex > 0) {
-          this.modalImageIndex--;
-        }
-      }" v-show="this.modalImageIndex>0"><span class="material-icons-outlined">chevron_left</span></button>
+  <div class="home" ref="home">
+    <div class="slideshow" v-if="this.isOpeningModal" v-touch:swipe.left="slideshowLeftEvent" v-touch:swipe.right="slideshowRightEvent">
+      <button class="slideshow__button slideshow__close-button" v-on:click="slideshowCloseEvent"><span class="material-icons-outlined">close</span></button>
+      <button class="slideshow__button slideshow__minus-button" v-on:click="slideshowLeftEvent" v-show="this.modalImageIndex>0"><span class="material-icons-outlined">chevron_left</span></button>
       <img class="slideshow__image" v-lazy="this.modalImageList[this.modalImageIndex]">
-      <button class="slideshow__button slideshow__plus-button" v-on:click="()=>{
-        if (this.modalImageList.length-1 > this.modalImageIndex) {
-          this.modalImageIndex++;
-        }
-      }" v-show="this.modalImageList.length-1>this.modalImageIndex"><span class="material-icons-outlined">chevron_right</span></button>
+      <button class="slideshow__button slideshow__plus-button" v-on:click="slideshowRightEvent" v-show="this.modalImageList.length-1>this.modalImageIndex"><span class="material-icons-outlined">chevron_right</span></button>
     </div>
     <div class="notlogined" v-if="this.credential==null">
       <button v-on:click="signin">Sign in with Twitter</button>
@@ -148,10 +140,10 @@ export default {
         console.log(err)
       });
       // ページ最上部に飛ばす
-      window.scrollTo({
+      this.$refs.home.scrollTo({
         top: 0,
         behavior: "smooth"
-      })
+      });
     },
     processRes(res, isReset=true) {
       this.maxId = res.data.max_id
@@ -198,6 +190,20 @@ export default {
     openModal(imgUrlList) {
       this.modalImageList = imgUrlList;
       this.modalImageIndex = 0;
+    },
+    slideshowCloseEvent() {
+      this.modalImageList=[];
+      this.modalImageIndex=null;
+    },
+    slideshowLeftEvent() {
+      if (this.modalImageIndex > 0) {
+        this.modalImageIndex--;
+      }
+    },
+    slideshowRightEvent() {
+      if (this.modalImageList.length-1 > this.modalImageIndex) {
+        this.modalImageIndex++;
+      }
     },
     preventDefaultEvent(event) {
       event.preventDefault();
@@ -247,8 +253,11 @@ export default {
         this.credential = JSON.parse(localStorage.getItem('credential'))
       }
     })
+    document.addEventListener("backbutton", this.slideshowCloseEvent, false);
+  },
+  beforeDestroy () {
+    document.addEventListener("backbutton", this.slideshowCloseEvent, false);
   }
-
 }
 </script>
 
@@ -276,8 +285,10 @@ export default {
   &__button {
     font-size: 1.8rem;
     border: none;
-    background: transparent;
+    border-radius: 50%;
+    background: #4a4a4a;
     color: #fefefe;
+    opacity: 0.8;
   }
   &__close-button {
     position: absolute;
@@ -293,6 +304,7 @@ export default {
     width: 100%;
     height: 100%;
     object-fit: scale-down;
+    user-select: none;
   }
   &__plus-button {
     position: absolute;
