@@ -1,6 +1,6 @@
 <template>
   <div class="home" ref="home">
-    <div class="slideshow" v-if="this.isOpeningModal" v-touch:swipe.left="slideshowLeftEvent" v-touch:swipe.right="slideshowRightEvent">
+    <div class="slideshow" v-if="this.isOpeningModal" v-touch:swipe.left="slideshowRightEvent" v-touch:swipe.right="slideshowLeftEvent">
       <button class="slideshow__button slideshow__close-button" v-on:click="slideshowCloseEvent"><span class="material-icons-outlined">close</span></button>
       <button class="slideshow__button slideshow__minus-button" v-on:click="slideshowLeftEvent" v-show="this.modalImageIndex>0"><span class="material-icons-outlined">chevron_left</span></button>
       <img class="slideshow__image" v-lazy="this.modalImageList[this.modalImageIndex]">
@@ -191,9 +191,10 @@ export default {
       this.modalImageList = imgUrlList;
       this.modalImageIndex = 0;
     },
-    slideshowCloseEvent() {
+    slideshowCloseEvent(e) {
       this.modalImageList=[];
       this.modalImageIndex=null;
+      e.preventDefaultEvent();
     },
     slideshowLeftEvent() {
       if (this.modalImageIndex > 0) {
